@@ -9,10 +9,10 @@ namespace NoteSaver
 {
 	public partial class Form1 : Form
 	{
-		private bool isDoubleClick = false;
-		private int textSelection = 0;
-		private int rowNumber = 0;
-		private int previousLineIndex = 0;
+		private bool _isDoubleClick = false;
+		private int _textSelection = 0;
+		private int _rowNumber = 0;
+		private int _previousLineIndex = 0;
 
 
 		public Form1()
@@ -23,7 +23,7 @@ namespace NoteSaver
 
 		private void LoadText()
 		{
-			if (richTextBox1 != null && richTextBox1.Text.Length > 0)
+			if (richTextBox1.Text.Length > 0)
 			{
 				richTextBox1.Text = "";
 			}
@@ -42,14 +42,14 @@ namespace NoteSaver
 				Console.WriteLine(e.Message);
 			}
 
-			rowNumber = 0;
+			_rowNumber = 0;
 			var level = 1;
 
 			var lines = richTextBox1.Lines
-				.Select((x, index) => new Line 
-				{ 
-					Index = index, 
-					Text = x 
+				.Select((x, index) => new Line
+				{
+					Index = index,
+					Text = x
 				})
 				.ToList();
 
@@ -59,9 +59,9 @@ namespace NoteSaver
 
 			treeView1.ExpandAll();
 
-			if (textSelection != 0 || textSelection != -1)
+			if (_textSelection != 0 || _textSelection != -1)
 			{
-				richTextBox1.Select(textSelection, 0);
+				richTextBox1.Select(_textSelection, 0);
 				richTextBox1.ScrollToCaret();
 			}
 		}
@@ -70,20 +70,20 @@ namespace NoteSaver
 		{
 			ICollection<TreeNode> listTreeNode = new List<TreeNode>();
 
-			var listLines = lines
-				.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= rowNumber && x.Index < sectionEnd)
+            List<Line> listLines = lines
+				.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= _rowNumber && x.Index < sectionEnd)
 				.ToList();
 
 			for (int i = 0; i < listLines.Count(); i++)
 			{
-				var LevelLines = lines
-					.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= rowNumber && x.Index < sectionEnd)
+                List<Line> LevelLines = lines
+					.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= _rowNumber && x.Index < sectionEnd)
 					.Take(2)
 					.ToList();
 
 				var firstRow = LevelLines.FirstOrDefault();
 				var lastRow = LevelLines.Count() > 1 ? LevelLines.LastOrDefault() : null;
-				var treeNodes = MakeTreeNode(lines, level + 1, lastRow != null ? lastRow.Index : sectionEnd);
+				var treeNodes = MakeTreeNode(lines, level + 1, lastRow?.Index ?? sectionEnd);
 
 				if (treeNodes.Length != 0)
 				{
@@ -94,7 +94,7 @@ namespace NoteSaver
 					listTreeNode.Add(new TreeNode(firstRow.Text.Replace($"##{level}", "")));
 				}
 
-				rowNumber = lastRow != null ? lastRow.Index : listLines[i].Index;
+				_rowNumber = lastRow?.Index ?? listLines[i].Index;
 			}
 
 			return listTreeNode.ToArray();
@@ -112,29 +112,29 @@ namespace NoteSaver
 
 			if (treeView1.SelectedNode != null && selectionIndex != -1)
 			{
-				textSelection = selectionIndex;
+				_textSelection = selectionIndex;
 				richTextBox1.Select(selectionIndex, 0);
 				richTextBox1.ScrollToCaret();
 			}
 
-			isDoubleClick = false;
+			_isDoubleClick = false;
 		}
 
 		private void treeView1_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
 		{
-			if (isDoubleClick && e.Action == TreeViewAction.Collapse)
+			if (_isDoubleClick && e.Action == TreeViewAction.Collapse)
 				e.Cancel = true;
 		}
 
 		private void treeView1_BeforeExpand(object sender, TreeViewCancelEventArgs e)
 		{
-			if (isDoubleClick && e.Action == TreeViewAction.Expand)
+			if (_isDoubleClick && e.Action == TreeViewAction.Expand)
 				e.Cancel = true;
 		}
 
 		private void treeView1_MouseDown(object sender, MouseEventArgs e)
 		{
-			isDoubleClick = e.Clicks > 1;
+			_isDoubleClick = e.Clicks > 1;
 		}
 
 		private void textBox1_KeyDown(object sender, KeyEventArgs e)
@@ -146,9 +146,9 @@ namespace NoteSaver
 			int firstVisibleChar = richTextBox1.GetCharIndexFromPosition(new Point(0, 0));
 			int lineIndex = richTextBox1.GetLineFromCharIndex(firstVisibleChar);
 
-			if (previousLineIndex != lineIndex)
+			if (_previousLineIndex != lineIndex)
 			{
-				previousLineIndex = lineIndex;
+				_previousLineIndex = lineIndex;
 				richTextBox2.SelectionStart = richTextBox2.GetFirstCharIndexFromLine(lineIndex);
 				richTextBox2.ScrollToCaret();
 			}
@@ -170,10 +170,8 @@ namespace NoteSaver
 			{
 				return path;
 			}
-			else
-			{
-				File.Create(path);
-			}
+
+			File.Create(path);
 
 			return path;
 		}
