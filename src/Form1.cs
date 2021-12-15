@@ -23,7 +23,7 @@ namespace NoteSaver
 
 		private void LoadText()
 		{
-			if (richTextBox1 != null && richTextBox1.Text.Length > 0)
+			if (richTextBox1.Text.Length > 0)
 			{
 				richTextBox1.Text = "";
 			}
@@ -46,10 +46,10 @@ namespace NoteSaver
 			var level = 1;
 
 			var lines = richTextBox1.Lines
-				.Select((x, index) => new Line 
-				{ 
-					Index = index, 
-					Text = x 
+				.Select((x, index) => new Line
+				{
+					Index = index,
+					Text = x
 				})
 				.ToList();
 
@@ -83,7 +83,7 @@ namespace NoteSaver
 
 				var firstRow = LevelLines.FirstOrDefault();
 				var lastRow = LevelLines.Count() > 1 ? LevelLines.LastOrDefault() : null;
-				var treeNodes = MakeTreeNode(lines, level + 1, lastRow != null ? lastRow.Index : sectionEnd);
+				var treeNodes = MakeTreeNode(lines, level + 1, lastRow?.Index ?? sectionEnd);
 
 				if (treeNodes.Length != 0)
 				{
@@ -94,7 +94,7 @@ namespace NoteSaver
 					listTreeNode.Add(new TreeNode(firstRow.Text.Replace($"##{level}", "")));
 				}
 
-				_rowNumber = lastRow != null ? lastRow.Index : listLines[i].Index;
+				_rowNumber = lastRow?.Index ?? listLines[i].Index;
 			}
 
 			return listTreeNode.ToArray();
@@ -226,10 +226,8 @@ namespace NoteSaver
 			{
 				return path;
 			}
-			else
-			{
-				File.Create(path);
-			}
+
+			File.Create(path);
 
 			return path;
 		}
