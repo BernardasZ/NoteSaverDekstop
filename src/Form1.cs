@@ -9,11 +9,11 @@ namespace NoteSaver
 {
 	public partial class Form1 : Form
 	{
-		private bool isDoubleClick = false;
-		private int textSelection = 0;
-		private int rowNumber = 0;
-		private int previousLineIndex = 0;
-
+		private bool _isDoubleClick = false;
+		private int _textSelection = 0;
+		private int _rowNumber = 0;
+		private int _previousLineIndex = 0;
+		private readonly char _charCodeF = '\u0006';
 
 		public Form1()
 		{
@@ -42,7 +42,7 @@ namespace NoteSaver
 				Console.WriteLine(e.Message);
 			}
 
-			rowNumber = 0;
+			_rowNumber = 0;
 			var level = 1;
 
 			var lines = richTextBox1.Lines
@@ -59,9 +59,9 @@ namespace NoteSaver
 
 			treeView1.ExpandAll();
 
-			if (textSelection != 0 || textSelection != -1)
+			if (_textSelection != 0 || _textSelection != -1)
 			{
-				richTextBox1.Select(textSelection, 0);
+				richTextBox1.Select(_textSelection, 0);
 				richTextBox1.ScrollToCaret();
 			}
 		}
@@ -71,13 +71,13 @@ namespace NoteSaver
 			ICollection<TreeNode> listTreeNode = new List<TreeNode>();
 
 			var listLines = lines
-				.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= rowNumber && x.Index < sectionEnd)
+				.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= _rowNumber && x.Index < sectionEnd)
 				.ToList();
 
 			for (int i = 0; i < listLines.Count(); i++)
 			{
 				var LevelLines = lines
-					.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= rowNumber && x.Index < sectionEnd)
+					.Where(x => x.Text.StartsWith($"##{level}") && x.Index >= _rowNumber && x.Index < sectionEnd)
 					.Take(2)
 					.ToList();
 
@@ -94,13 +94,13 @@ namespace NoteSaver
 					listTreeNode.Add(new TreeNode(firstRow.Text.Replace($"##{level}", "")));
 				}
 
-				rowNumber = lastRow != null ? lastRow.Index : listLines[i].Index;
+				_rowNumber = lastRow != null ? lastRow.Index : listLines[i].Index;
 			}
 
 			return listTreeNode.ToArray();
 		}
 
-		private void button1_Click(object sender, EventArgs e)
+		private void buttonSave_Click(object sender, EventArgs e)
 		{
 			richTextBox1.SaveFile(Path.GetPath(), RichTextBoxStreamType.RichText);
 			LoadText();
@@ -112,33 +112,48 @@ namespace NoteSaver
 
 			if (treeView1.SelectedNode != null && selectionIndex != -1)
 			{
-				textSelection = selectionIndex;
+				_textSelection = selectionIndex;
 				richTextBox1.Select(selectionIndex, 0);
 				richTextBox1.ScrollToCaret();
 			}
 
-			isDoubleClick = false;
+			_isDoubleClick = false;
 		}
 
 		private void treeView1_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
 		{
-			if (isDoubleClick && e.Action == TreeViewAction.Collapse)
+			if (_isDoubleClick && e.Action == TreeViewAction.Collapse)
 				e.Cancel = true;
 		}
 
 		private void treeView1_BeforeExpand(object sender, TreeViewCancelEventArgs e)
 		{
-			if (isDoubleClick && e.Action == TreeViewAction.Expand)
+			if (_isDoubleClick && e.Action == TreeViewAction.Expand)
 				e.Cancel = true;
 		}
 
 		private void treeView1_MouseDown(object sender, MouseEventArgs e)
 		{
-			isDoubleClick = e.Clicks > 1;
+			_isDoubleClick = e.Clicks > 1;
 		}
 
 		private void textBox1_KeyDown(object sender, KeyEventArgs e)
 		{
+			if (e.KeyCode == Keys.Enter)
+			{
+				var text = textBox1.Text;
+
+				if (!string.IsNullOrWhiteSpace(text))
+				{
+					ExecuteSearch(text);
+				}
+				else
+				{
+					richTextBox1.SelectAll();
+					richTextBox1.SelectionBackColor = SystemColors.Window;
+					textBox1.Text = string.Empty;
+				}
+			}
 		}
 
 		private void richTextBox1_VScroll(object sender, EventArgs e)
@@ -146,9 +161,9 @@ namespace NoteSaver
 			int firstVisibleChar = richTextBox1.GetCharIndexFromPosition(new Point(0, 0));
 			int lineIndex = richTextBox1.GetLineFromCharIndex(firstVisibleChar);
 
-			if (previousLineIndex != lineIndex)
+			if (_previousLineIndex != lineIndex)
 			{
-				previousLineIndex = lineIndex;
+				_previousLineIndex = lineIndex;
 				richTextBox2.SelectionStart = richTextBox2.GetFirstCharIndexFromLine(lineIndex);
 				richTextBox2.ScrollToCaret();
 			}
@@ -157,6 +172,47 @@ namespace NoteSaver
 		private void richTextBox1_ContentsResized(object sender, ContentsResizedEventArgs e)
 		{
 			richTextBox2.ZoomFactor = richTextBox1.ZoomFactor;
+		}
+
+		private void richTextBox1_KeyPress(object sender, KeyPressEventArgs e)
+		{
+			var selectedText = richTextBox1.SelectedText;
+			var textLength = selectedText?.Length ?? 0;
+
+			if (((ModifierKeys & Keys.Control) == Keys.Control) && e.KeyChar == _charCodeF && !string.IsNullOrWhiteSpace(selectedText) && textLength > 0 && textLength < 100)
+			{
+				textBox1.Text = selectedText;
+				ExecuteSearch(selectedText);
+			}
+		}
+
+		private void ExecuteSearch(string phrase)
+		{
+			var textLength = phrase?.Length ?? 0;
+			var selectedTextPosition = richTextBox1.SelectionStart;
+
+			richTextBox1.SelectAll();
+			richTextBox1.SelectionBackColor = SystemColors.Window;
+
+			for (int i = 0; i < richTextBox1.Text.Length - textLength; i++)
+			{
+				var text = richTextBox1.Text.Substring(i, textLength);
+
+				if (text == phrase)
+				{
+					richTextBox1.Select(i, textLength);
+					richTextBox1.SelectionBackColor = Color.Orange;
+				}
+			}
+
+			richTextBox1.Select(selectedTextPosition, textLength);
+		}
+
+		private void buttonClearSearch_Click(object sender, EventArgs e)
+		{
+			richTextBox1.SelectAll();
+			richTextBox1.SelectionBackColor = SystemColors.Window;
+			textBox1.Text = string.Empty;
 		}
 	}
 
